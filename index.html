@@ -2,6 +2,7 @@
 <html>
 <head>
   <title>재물조사 웹앱</title>
+  <meta charset="UTF-8">
   <script src="https://unpkg.com/html5-qrcode"></script>
 </head>
 <body>
@@ -25,7 +26,7 @@
   <script>
     let scannedCode = "";
     let staffId = "";
-    const endpoint = "https://script.google.com/macros/s/AKfycbw82Gi8YXuFKTDhrmats5YSwQHFud-qiMObqYMOM4An9bEw7g1xllWt6cxS9nntaeGZcg/exec"; // Apps Script URL
+    const endpoint = "https://script.google.com/macros/s/AKfycbw82Gi8YXuFKTDhrmats5YSwQHFud-qiMObqYMOM4An9bEw7g1xllWt6cxS9nntaeGZcg/exec";
 
     function startScan() {
       staffId = document.getElementById("staffId").value.trim();
@@ -50,6 +51,18 @@
       })
       .then(res => res.json())
       .then(data => {
+        if (data.status === "error") {
+          alert("❌ 오류: " + data.message);
+          return;
+        }
+        if (data.status === "same") {
+          alert("✅ 위치 동일, 기록 생략됨");
+          return;
+        }
+        if (data.status === "updated") {
+          alert("✅ 위치 변경 기록 완료");
+          return;
+        }
         if (data.status === "show") {
           document.getElementById("assetInfo").innerHTML =
             `<b>자산명:</b> ${data.asset}<br><b>기존 위치:</b> ${data.originalLocation}<br><br>현재 위치가 다르면 아래에 입력하세요.`;
@@ -70,10 +83,9 @@
         body: JSON.stringify({ code: scannedCode, staffId, newLocation }),
         headers: { "Content-Type": "application/json" }
       })
-      .then(res => res.text())
-      .then(msg => {
-        alert(msg);
-        // 초기화
+      .then(res => res.json())
+      .then(data => {
+        alert(data.message);
         document.getElementById("assetInfo").innerText = "";
         document.getElementById("locationInput").style.display = "none";
         document.getElementById("newLocation").value = "";
