@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>재물조사 웹앱</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+</head>
+<body>
+  <h2>📱 재물조사 바코드 시스템</h2>
+
+  <div id="setup">
+    <label>직번: <input type="text" id="staffId" placeholder="예: 123456" /></label>
+    <button onclick="startScan()">시작</button>
+  </div>
+
+  <div id="scanner" style="display:none;">
+    <p><b>📷 바코드를 스캔하세요</b></p>
+    <div id="reader" style="width:300px;"></div>
+    <div id="assetInfo" style="margin-top:10px;"></div>
+    <div id="locationInput" style="display:none;">
+      <label>세부위치가 다를 경우 입력: <input type="text" id="newLocation" placeholder="창조관 3층 복도" /></label>
+      <button onclick="submitLocation()">위치 기록</button>
+    </div>
+  </div>
+
+  <script>
+    let scannedCode = "";
+    let staffId = "";
+    const endpoint = "https://script.google.com/macros/s/AKfycbw82Gi8YXuFKTDhrmats5YSwQHFud-qiMObqYMOM4An9bEw7g1xllWt6cxS9nntaeGZcg/exec"; // Apps Script URL
+
+    function startScan() {
+      staffId = document.getElementById("staffId").value.trim();
+      if (!staffId) {
+        alert("직번을 입력해주세요");
+        return;
+      }
+
+      document.getElementById("setup").style.display = "none";
+      document.getElementById("scanner").style.display = "block";
+
+      const scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 });
+      scanner.render(onScanSuccess);
+    }
+
+    function onScanSuccess(decodedText) {
+      scannedCode = decodedText;
+      fetch(endpoint, {
+        method: "POST",
+        body: JSON.stringify({ code: scannedCode, staffId }),
+        headers: { "Content-Type": "application/json" }
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === "show") {
+          document.getElementById("assetInfo").innerHTML =
+            `<b>자산명:</b> ${data.asset}<br><b>기존 위치:</b> ${data.originalLocation}<br><br>현재 위치가 다르면 아래에 입력하세요.`;
+          document.getElementById("locationInput").style.display = "block";
+        }
+      });
+    }
+
+    function submitLocation() {
+      const newLocation = document.getElementById("newLocation").value.trim();
+      if (!newLocation) {
+        alert("위치를 입력해주세요.");
+        return;
+      }
+
+      fetch(endpoint, {
+        method: "POST",
+        body: JSON.stringify({ code: scannedCode, staffId, newLocation }),
+        headers: { "Content-Type": "application/json" }
+      })
+      .then(res => res.text())
+      .then(msg => {
+        alert(msg);
+        // 초기화
+        document.getElementById("assetInfo").innerText = "";
+        document.getElementById("locationInput").style.display = "none";
+        document.getElementById("newLocation").value = "";
+      });
+    }
+  </script>
+</body>
+</html>
